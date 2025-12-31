@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  trino:
+    image: trinodb/trino:latest
+    container_name: trino
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./catalog:/etc/trino/catalog
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=12345678
+      - AWS_REGION=us-east-1
+    networks:
+      - trino-net
+
+networks:
+  trino-net:
