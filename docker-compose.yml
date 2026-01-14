@@ -1,6 +1,33 @@
 version: '3.8'
 
 services:
+  # ============================================
+  # POSTGRESQL DATABASE
+  # Lưu metadata của Iceberg (tables, schemas, snapshots)
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: iceberg-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=iceberg_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - trino-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d iceberg_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # TRINO QUERY ENGINE
+  # Query engine để chạy SQL với Iceberg JDBC Catalog
+  # ============================================
   trino:
     image: trinodb/trino:latest
     container_name: trino
@@ -8,12 +35,15 @@ services:
       - "8081:8080"
     volumes:
       - ./catalog:/etc/trino/catalog
-    environment:
-      - AWS_ACCESS_KEY_ID=admin
-      - AWS_SECRET_ACCESS_KEY=12345678
-      - AWS_REGION=us-east-1
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - trino-net
 
+volumes:
+  postgres-data:
+
 networks:
   trino-net:
+    driver: bridge
