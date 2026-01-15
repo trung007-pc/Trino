@@ -1,0 +1,24 @@
+services:
+  trino-api:
+    image: vinagroupteam/trino-api:r1
+    container_name: trino-api
+    ports:
+      - "9999:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Trino__Host=192.168.100.17
+      - Trino__Port=8000
+      - Trino__Catalog=iceberg
+      - Trino__Schema=v1
+      - Trino__User=trino
+      - Trino__EnableSsl=false
+      - Trino__EnableSqlLogging=true
+    networks:
+      - trino-network
+
+networks:
+  trino-network:
+    driver: bridge
+
+volumes:
+  trino-data:

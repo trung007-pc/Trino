@@ -170,7 +170,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
         var values = string.Join(", ", properties.Select(p => FormatValue(p.GetValue(entity))));
 
         var sql = $"INSERT INTO {_tableName} ({columns}) VALUES ({values})";
-        Console.WriteLine($"[DEBUG SQL] {sql}");
+        // Console.WriteLine($"[DEBUG SQL] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         command.ExecuteNonQuery();
@@ -189,7 +189,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
         var values = string.Join(", ", properties.Select(p => FormatValue(p.GetValue(entity))));
 
         var sql = $"INSERT INTO {_tableName} ({columns}) VALUES ({values})";
-        Console.WriteLine($"[DEBUG SQL] {sql}");
+        // Console.WriteLine($"[DEBUG SQL] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         await command.ExecuteNonQueryAsync();
@@ -242,8 +242,8 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
         });
 
         var sql = $"INSERT INTO {_tableName} ({columns}) VALUES {string.Join(", ", valuesClauses)}";
-        Console.WriteLine($"[DEBUG SQL - Multiple VALUES] Inserting {entityList.Count} records");
-        Console.WriteLine($"[DEBUG SQL] {sql}");
+        // Console.WriteLine($"[DEBUG SQL - Multiple VALUES] Inserting {entityList.Count} records");
+        // Console.WriteLine($"[DEBUG SQL] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         command.ExecuteNonQuery();
@@ -274,8 +274,8 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
         });
 
         var sql = $"INSERT INTO {_tableName} ({columns}) VALUES {string.Join(", ", valuesClauses)}";
-        Console.WriteLine($"[DEBUG SQL - Multiple VALUES] Inserting {entityList.Count} records");
-        Console.WriteLine($"[DEBUG SQL] {sql}");
+        // Console.WriteLine($"[DEBUG SQL - Multiple VALUES] Inserting {entityList.Count} records");
+        // Console.WriteLine($"[DEBUG SQL] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         await command.ExecuteNonQueryAsync();
@@ -303,7 +303,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
         var keyValue = FormatValue(keyProperty.GetValue(entity));
 
         var sql = $"UPDATE {_tableName} SET {setClause} WHERE {keyColumnName} = {keyValue}";
-        Console.WriteLine($"[DEBUG SQL] {sql}");
+        // Console.WriteLine($"[DEBUG SQL] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         command.ExecuteNonQuery();
@@ -331,7 +331,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
         var keyValue = FormatValue(keyProperty.GetValue(entity));
 
         var sql = $"UPDATE {_tableName} SET {setClause} WHERE {keyColumnName} = {keyValue}";
-        Console.WriteLine($"[DEBUG SQL] {sql}");
+        // Console.WriteLine($"[DEBUG SQL] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         await command.ExecuteNonQueryAsync();
@@ -351,7 +351,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
 
         var sql = $"DELETE FROM {_tableName} WHERE {keyColumnName} = {keyValue}";
         
-        Console.WriteLine($"[SQL DELETE] {sql}");
+        // Console.WriteLine($"[SQL DELETE] {sql}");
         
         using var command = new TrinoCommand(_connection, sql);
         command.ExecuteNonQuery();
@@ -371,7 +371,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
 
         var sql = $"DELETE FROM {_tableName} WHERE {keyColumnName} = {keyValue}";
         
-        Console.WriteLine($"[SQL DELETE] {sql}");
+        // Console.WriteLine($"[SQL DELETE] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         await command.ExecuteNonQueryAsync();
@@ -410,7 +410,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
 
         var sql = $"DELETE FROM {_tableName}{whereClause}";
         
-        Console.WriteLine($"[SQL DELETE] {sql}");
+        // Console.WriteLine($"[SQL DELETE] {sql}");
 
         using var command = new TrinoCommand(_connection, sql);
         return await command.ExecuteNonQueryAsync();
@@ -514,7 +514,7 @@ public class TrinoDbSet<T> : IQueryable<T>, IEnumerable<T> where T : class, new(
 
         var sql = $"SELECT {columns} FROM {_tableName}{whereClause}{orderByClause}{offsetLimitClause}";
         
-        Console.WriteLine($"[SQL QUERY] {sql}");
+        // Console.WriteLine($"[SQL QUERY] {sql}");
         
         return sql;
     }

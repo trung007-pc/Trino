@@ -258,7 +258,7 @@ public static class TrinoExtensions
                 else
                 {
                     // Tìm thấy occurrence thứ 2 - đây là split point đúng
-                    Console.WriteLine($"Found duplicate column '{columnName}' at index {i} (first at {firstMatchIndex}), using index {i}");
+                    // Console.WriteLine($"Found duplicate column '{columnName}' at index {i} (first at {firstMatchIndex}), using index {i}");
                     return i;
                 }
             }
@@ -267,7 +267,7 @@ public static class TrinoExtensions
         // Nếu chỉ tìm thấy 1 occurrence, return nó
         if (firstMatchIndex >= 0)
         {
-            Console.WriteLine($"Only one occurrence of '{splitOn}' found at index {firstMatchIndex}");
+            // Console.WriteLine($"Only one occurrence of '{splitOn}' found at index {firstMatchIndex}");
             return firstMatchIndex;
         }
         
