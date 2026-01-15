@@ -25,7 +25,7 @@ public abstract class TrinoDbContext : IDisposable, IAsyncDisposable
     /// <summary>
     /// Helper method để tạo DbSet cho một entity
     /// </summary>
-    protected TrinoDbSet<T> Set<T>(string tableName) where T : class, new()
+    public TrinoDbSet<T> Set<T>(string tableName) where T : class, new()
     {
         return new TrinoDbSet<T>(Connection, tableName);
     }

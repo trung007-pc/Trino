@@ -221,7 +221,6 @@ public class TongHopKcbPerformanceTests : IDisposable
                     var progress = (batchIndex + 1) * 100.0 / totalBatches;
                     var avgBatchTime = batchTimes.Average();
                     _output.WriteLine($"  [{batchIndex + 1,3}/{totalBatches}] Progress: {progress:F1}% | " +
-                                    $"Batch time: {batchSw.ElapsedMilliseconds,5}ms | " +
                                     $"Avg: {avgBatchTime:F0}ms");
                 }
             }
@@ -254,10 +253,6 @@ public class TongHopKcbPerformanceTests : IDisposable
             _output.WriteLine($"  • Average Batch Time:      {avgBatchTimeMs:F2} ms");
             _output.WriteLine($"  • Min Batch Time:          {batchTimes.Min()} ms");
             _output.WriteLine($"  • Max Batch Time:          {batchTimes.Max()} ms");
-            foreach (var item in batchTimes)
-            {
-                _output.WriteLine($"BatchTime:{item}");
-            }
             _output.WriteLine("");
             
             _output.WriteLine($"📊 PER-RECORD STATISTICS:");

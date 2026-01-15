@@ -16,6 +16,13 @@ batchTimes.Add(4994);
 batchTimes.Add(4009);
 batchTimes.Add(3295);
 
+foreach (var batchTime in batchTimes)
+{
+    Console.WriteLine(batchTime);
+}
+
+
+Console.WriteLine("trung bình");
 Console.WriteLine(batchTimes.Average());
 Console.WriteLine(batchTimes.Min());
 Console.WriteLine(batchTimes.Max());

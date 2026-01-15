@@ -1,0 +1,44 @@
+### Performance Test API - Parallel Insert to Multiple Tables
+
+@baseUrl = http://localhost:5000
+@apiUrl = {{baseUrl}}/api/performancetest
+
+###
+# Test 1: Insert 100k records vào 1 bảng (TongHopKcb)
+POST {{apiUrl}}/insert-parallel?tableCount=1&recordsPerTable=100000&batchSize=1000
+Content-Type: application/json
+
+###
+# Test 2: Insert 100k records song song vào 2 bảng (TongHopKcb + TongHopKcb1)
+POST {{apiUrl}}/insert-parallel?tableCount=2&recordsPerTable=100000&batchSize=1000
+Content-Type: application/json
+
+###
+# Test 3: Insert 100k records song song vào 5 bảng
+POST {{apiUrl}}/insert-parallel?tableCount=5&recordsPerTable=100000&batchSize=1000
+Content-Type: application/json
+
+###
+# Test 4: Insert 100k records song song vào 10 bảng
+POST {{apiUrl}}/insert-parallel?tableCount=10&recordsPerTable=100000&batchSize=1000
+Content-Type: application/json
+
+###
+# Test 5: Insert 100k records song song vào 15 bảng (FULL TEST)
+POST {{apiUrl}}/insert-parallel?tableCount=15&recordsPerTable=100000&batchSize=1000
+Content-Type: application/json
+
+###
+# Test 6: Quick test - 10k records vào 3 bảng
+POST {{apiUrl}}/insert-parallel?tableCount=3&recordsPerTable=10000&batchSize=1000
+Content-Type: application/json
+
+###
+# Test 7: Large batch size test - 100k records, batch size 5000
+POST {{apiUrl}}/insert-parallel?tableCount=1&recordsPerTable=100000&batchSize=5000
+Content-Type: application/json
+
+###
+# Test 8: Small batch size test - 100k records, batch size 500
+POST {{apiUrl}}/insert-parallel?tableCount=1&recordsPerTable=100000&batchSize=500
+Content-Type: application/json
