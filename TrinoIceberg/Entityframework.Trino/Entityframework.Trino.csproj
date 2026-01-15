@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        
+        <!-- Package Metadata -->
+        <PackageId>EntityFramework.Trino</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Your Name</Authors>
+        <Company>Your Company</Company>
+        <Description>Entity Framework-like ORM for Trino/Iceberg with LINQ support, lazy evaluation, migrations, and dependency injection.</Description>
+        <PackageTags>trino;iceberg;orm;entityframework;linq;database</PackageTags>
+        <PackageProjectUrl>https://github.com/yourusername/EntityFramework.Trino</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/yourusername/EntityFramework.Trino</RepositoryUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        
+        <!-- Build Options -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+        <PackageReference Include="Trino.Client.ADO" Version="1.0.9" />
+        <PackageReference Include="Trino.Client.CSharp" Version="1.0.9" />
+        <PackageReference Include="Dapper" Version="2.1.35" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,129 @@
+version: '3.8'
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "3"
+
+services:
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    logging: *default-logging
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      
+      # 2 listeners: INTERNAL (containers) và EXTERNAL (host)
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:19093,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:19092
+      
+      # INTERNAL cho containers (Kafka UI), EXTERNAL cho host (.NET app)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19093,PLAINTEXT_HOST://localhost:9092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:19092
+
+      # Data directory
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: "I8dM8LQjTjWfB9iA1f1Vhg"
+
+      # Log retention 30 days
+      KAFKA_LOG_RETENTION_MS: 2592000000
+
+      # Replication
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+    volumes:
+      - ./kafka-data:/var/lib/kafka/data
+    networks:
+      - kafka-net
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ============================================
+  # FLINK JOB MANAGER - Stream Processing
+  # ============================================
+  flink-jobmanager:
+    image: flink:1.20-scala_2.12-java11
+    container_name: flink-jobmanager
+    ports:
+      - "8081:8081"
+    logging: *default-logging
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        state.backend: filesystem
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        state.savepoints.dir: file:///tmp/flink-savepoints
+        execution.checkpointing.interval: 60000
+        execution.checkpointing.mode: EXACTLY_ONCE
+    volumes:
+      - flink-data:/tmp
+      - ./flink-jobs:/opt/flink/usrlib
+    networks:
+      - kafka-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  flink-taskmanager:
+    image: flink:1.20-scala_2.12-java11
+    container_name: flink-taskmanager
+    logging: *default-logging
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        taskmanager.memory.process.size: 2048m
+    volumes:
+      - flink-data:/tmp
+      - ./flink-jobs:/opt/flink/usrlib
+    networks:
+      - kafka-net
+    depends_on:
+      - flink-jobmanager
+
+  # ============================================
+  # KAFKA UI - Web interface để quản lý Kafka
+  # ============================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8088:8080"
+    logging: *default-logging
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19093
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
+      - kafka-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  kafka-data:
+  flink-data:
+
+networks:
+  kafka-net:
+    driver: bridge

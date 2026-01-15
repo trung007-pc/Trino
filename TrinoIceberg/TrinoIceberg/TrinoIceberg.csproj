@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Entityframework.Trino\Entityframework.Trino.csproj" />
+        <ProjectReference Include="..\Entityframework.Trino.Iceberg\Entityframework.Trino.Iceberg.csproj" />
+    </ItemGroup>
+
+</Project>
