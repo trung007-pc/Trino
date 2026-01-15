@@ -1,28 +1,32 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-
 using ConsoleApp;
+using System.Diagnostics;
 
+Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║           MULTI-THREADED PERFORMANCE TEST                  ║");
+Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
+Console.WriteLine();
 
-var batchTimes = new List<long>();
-batchTimes.Add(3146);
-batchTimes.Add(3583);
-batchTimes.Add(3318);
-batchTimes.Add(6614);
-batchTimes.Add(3263);
-batchTimes.Add(3602);
-batchTimes.Add(3407);
-batchTimes.Add(4994);
-batchTimes.Add(4009);
-batchTimes.Add(3295);
+var tables = new List<string>() { "A", "B", "C","D","E","F","G" };
 
-foreach (var batchTime in batchTimes)
-{
-    Console.WriteLine(batchTime);
-}
+Console.WriteLine($"Testing {tables.Count} tables in PARALLEL...");
+Console.WriteLine();
 
+var sw = Stopwatch.StartNew();
 
-Console.WriteLine("trung bình");
-Console.WriteLine(batchTimes.Average());
-Console.WriteLine(batchTimes.Min());
-Console.WriteLine(batchTimes.Max());
+// Chạy đa luồng với Task.Run
+var tasks = tables.Select(tableName =>
+    {
+        App app = new App();
+        
+        return app.Run(tableName); 
+    }
+).ToArray();
+
+// Chờ tất cả tasks hoàn thành
+await Task.WhenAll(tasks);
+
+sw.Stop();
+Console.ReadKey();
+Console.WriteLine("kết thúc");

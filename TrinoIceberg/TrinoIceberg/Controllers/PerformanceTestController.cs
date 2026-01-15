@@ -75,9 +75,9 @@ public class PerformanceTestController : ControllerBase
             _logger.LogInformation($"📊 Data Size: Total {batchSizeInfo.TotalDataSizeMB:N2} MB | " +
                                  $"Per Batch ({batchSize:N0} records): {batchSizeInfo.BatchDataSizeMB:N2} MB");
             
-            // Chạy song song insert cho tất cả các bảng
+            // Chạy song song insert cho tất cả các bảng với Task.Run để tạo threads riêng biệt
             var tasks = tableNames.Select(tableName => 
-                InsertToTableAsync(tableName, testRunId, recordsPerTable, batchSize, tableResults)
+                Task.Run(() => InsertToTableAsync(tableName, testRunId, recordsPerTable, batchSize, tableResults))
             ).ToArray();
 
             await Task.WhenAll(tasks);
