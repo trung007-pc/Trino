@@ -201,10 +201,10 @@ public class TongHopKcbPerformanceTests : IDisposable
             _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             _output.WriteLine("STEP 2: Inserting records in batches...");
             _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
+            
             var batchTimes = new List<long>();
             var totalInsertSw = Stopwatch.StartNew();
-
+            
             for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
             {
                 var batch = allRecords.Skip(batchIndex * BATCH_SIZE).Take(BATCH_SIZE).ToList();
@@ -225,23 +225,23 @@ public class TongHopKcbPerformanceTests : IDisposable
                                     $"Avg: {avgBatchTime:F0}ms");
                 }
             }
-
+            
             totalInsertSw.Stop();
             _output.WriteLine("");
             _output.WriteLine($"✓ All {TOTAL_RECORDS:N0} records inserted successfully!");
             _output.WriteLine("");
-
+            
             // ===== STEP 3: PERFORMANCE STATISTICS =====
             _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             _output.WriteLine("STEP 3: Performance Statistics");
             _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
+            
             var totalTimeMs = totalInsertSw.ElapsedMilliseconds;
             var totalTimeSec = totalTimeMs / 1000.0;
             var avgBatchTimeMs = batchTimes.Average();
             var avgRecordTimeMs = totalTimeMs / (double)TOTAL_RECORDS;
             var recordsPerSecond = TOTAL_RECORDS / totalTimeSec;
-
+            
             _output.WriteLine($"📊 OVERALL PERFORMANCE:");
             _output.WriteLine($"  • Total Time:              {totalTimeMs:N0} ms ({totalTimeSec:F2} seconds)");
             _output.WriteLine($"  • Total Records Inserted:  {TOTAL_RECORDS:N0} records");
@@ -264,7 +264,7 @@ public class TongHopKcbPerformanceTests : IDisposable
             _output.WriteLine($"  • Average Time per Record: {avgRecordTimeMs:F4} ms");
             _output.WriteLine($"  • Average Records/Batch:   {BATCH_SIZE / (avgBatchTimeMs / 1000.0):F0} records/sec");
             _output.WriteLine("");
-
+            
             // ===== STEP 4: WAIT FOR ICEBERG COMMIT =====
             _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             _output.WriteLine("STEP 4: Waiting for Iceberg commit...");
@@ -273,7 +273,7 @@ public class TongHopKcbPerformanceTests : IDisposable
             await Task.Delay(5000); // Wait 5 seconds for Iceberg to commit
             _output.WriteLine("✓ Iceberg commit grace period completed");
             _output.WriteLine("");
-
+            
             // ===== STEP 5: VERIFY INSERTED RECORDS =====
             _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             _output.WriteLine("STEP 5: Verifying inserted records...");
@@ -282,7 +282,7 @@ public class TongHopKcbPerformanceTests : IDisposable
             var count = await _context.TongHopKcbs
                 .Where(t => t.MA_LK.Contains(_testRunId))
                 .CountAsync();
-
+            
             _output.WriteLine($"✓ Found {count:N0} records in database (expected: {TOTAL_RECORDS:N0})");
             
             if (count < TOTAL_RECORDS)
@@ -305,7 +305,7 @@ public class TongHopKcbPerformanceTests : IDisposable
             _output.WriteLine($"⏱️  Total Time:          {totalTimeSec:F2} seconds");
             _output.WriteLine($"🚀 Throughput:          {recordsPerSecond:F0} records/sec");
             _output.WriteLine("");
-
+            
             // Assertions
             Assert.True(count >= TOTAL_RECORDS * 0.95, 
                 $"Expected at least {TOTAL_RECORDS * 0.95:N0} records, but got {count:N0}");
@@ -334,40 +334,27 @@ public class TongHopKcbPerformanceTests : IDisposable
     }
 
     /// <summary>
-    /// Measure and display batch size metrics
+    /// Đo khối lượng của 1 batch dữ liệu
     /// </summary>
     private void MeasureBatchSize(List<TongHopKcb> allRecords, int batchSize)
     {
         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        _output.WriteLine("BATCH SIZE MEASUREMENT: Analyzing sample batch...");
+        _output.WriteLine("ĐO KHỐI LƯỢNG DỮ LIỆU");
         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
-        var sampleBatch = allRecords.Take(batchSize).ToList();
+        // Đo tổng 100k records
+        var totalJson = JsonSerializer.Serialize(allRecords);
+        var totalBytes = System.Text.Encoding.UTF8.GetByteCount(totalJson);
+        var totalMB = totalBytes / (1024.0 * 1024.0);
         
-        // Serialize to JSON to measure size
-        var jsonOptions = new JsonSerializerOptions 
-        { 
-            WriteIndented = false,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never
-        };
-        var jsonString = JsonSerializer.Serialize(sampleBatch, jsonOptions);
-        var jsonSizeBytes = System.Text.Encoding.UTF8.GetByteCount(jsonString);
-        var jsonSizeKB = jsonSizeBytes / 1024.0;
-        var jsonSizeMB = jsonSizeKB / 1024.0;
+        // Đo 1 batch
+        var oneBatch = allRecords.Take(batchSize).ToList();
+        var batchJson = JsonSerializer.Serialize(oneBatch);
+        var batchBytes = System.Text.Encoding.UTF8.GetByteCount(batchJson);
+        var batchMB = batchBytes / (1024.0 * 1024.0);
         
-        // Estimate in-memory size (rough approximation)
-        var estimatedMemorySizePerRecord = 2048; // ~2KB per record (estimated)
-        var estimatedBatchMemoryBytes = batchSize * estimatedMemorySizePerRecord;
-        var estimatedBatchMemoryMB = estimatedBatchMemoryBytes / (1024.0 * 1024.0);
-        
-        _output.WriteLine($"📦 BATCH SIZE ANALYSIS (Sample: {batchSize:N0} records):");
-        _output.WriteLine($"  • JSON Serialized Size:");
-        _output.WriteLine($"    - Total:         {jsonSizeBytes:N0} bytes ({jsonSizeKB:N2} KB / {jsonSizeMB:N2} MB)");
-        _output.WriteLine($"    - Per Record:    {jsonSizeBytes / (double)batchSize:N0} bytes");
-        _output.WriteLine($"  • Estimated In-Memory Size:");
-        _output.WriteLine($"    - Total:         ~{estimatedBatchMemoryMB:N2} MB");
-        _output.WriteLine($"    - Per Record:    ~{estimatedMemorySizePerRecord:N0} bytes");
-        _output.WriteLine($"  • Records/Batch: {batchSize:N0}");
+        _output.WriteLine($"📊 TỔNG {allRecords.Count:N0} RECORDS: {totalMB:N2} MB");
+        _output.WriteLine($"📦 MỖI BATCH ({batchSize:N0} records): {batchMB:N2} MB");
         _output.WriteLine("");
     }
 
