@@ -435,6 +435,254 @@ public class TongHopKcbPerformanceTests : IDisposable
         return records;
     }
 
+    [Fact]
+    public async Task InsertDuplicate_SameId_ShouldAllowDuplicates()
+    {
+        // ===== TEST: ICEBERG ALLOWS DUPLICATE RECORDS =====
+        _output.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+        _output.WriteLine("║         TEST: Insert Duplicate Records (Same ID)              ║");
+        _output.WriteLine("╚════════════════════════════════════════════════════════════════╝");
+        _output.WriteLine("");
+
+        var testId = $"DUP_{Guid.NewGuid().ToString("N")[..8]}";
+        var sharedId = Guid.NewGuid();
+        
+            var record1 = CreateTestRecord(sharedId, testId, "First Insert", 1000000m);
+            await _context.TongHopKcbs.AddAsync(record1);
+
+            _output.WriteLine($"✓ First record inserted:");
+            _output.WriteLine($"  • ID:        {sharedId}");
+            _output.WriteLine($"  • MA_LK:     {testId}");
+            _output.WriteLine($"  • Patient:   {record1.HO_TEN}");
+            _output.WriteLine($"  • Cost:      {record1.T_TONGCHI_BV:N0} VND");
+            _output.WriteLine("");
+
+            await Task.Delay(2000); // Wait for Iceberg commit
+
+            // ===== STEP 2: INSERT DUPLICATE RECORD (SAME ID) =====
+            _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            _output.WriteLine("STEP 2: Inserting DUPLICATE record (SAME ID)...");
+            _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            //var record2 = CreateTestRecord(sharedId, testId, "Second Insert (DUPLICATE)", 2000000m);
+            await _context.TongHopKcbs.AddAsync(record1);
+            
+            _output.WriteLine("STEP 2: Inserting DUPLICATE record (SAME ID)...");
+
+    }
+
+    // [Fact]
+    // public async Task InsertDuplicate_100Records_10DuplicatesEach()
+    // {
+    //     // ===== TEST: INSERT 100 RECORDS WITH 10 DUPLICATES EACH =====
+    //     _output.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+    //     _output.WriteLine("║   TEST: 100 IDs × 10 Duplicates = 1000 Total Records          ║");
+    //     _output.WriteLine("╚════════════════════════════════════════════════════════════════╝");
+    //     _output.WriteLine("");
+    //
+    //     var testId = $"DUP_BULK_{DateTime.Now:HHmmss}";
+    //     const int UNIQUE_IDS = 100;
+    //     const int DUPLICATES_PER_ID = 10;
+    //     const int TOTAL_RECORDS = UNIQUE_IDS * DUPLICATES_PER_ID; // 1000
+    //
+    //     try
+    //     {
+    //         // ===== STEP 1: GENERATE RECORDS WITH DUPLICATES =====
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //         _output.WriteLine("STEP 1: Generating records with duplicates...");
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //
+    //         var allRecords = new List<TongHopKcb>();
+    //         var uniqueIds = Enumerable.Range(0, UNIQUE_IDS).Select(_ => Guid.NewGuid()).ToList();
+    //
+    //         foreach (var uniqueId in uniqueIds)
+    //         {
+    //             for (int dup = 0; dup < DUPLICATES_PER_ID; dup++)
+    //             {
+    //                 var record = CreateTestRecord(
+    //                     uniqueId, 
+    //                     testId, 
+    //                     $"Patient {uniqueIds.IndexOf(uniqueId)} - Dup {dup}", 
+    //                     1000000m + (dup * 100000m)
+    //                 );
+    //                 allRecords.Add(record);
+    //             }
+    //         }
+    //
+    //         _output.WriteLine($"✓ Generated {allRecords.Count:N0} records:");
+    //         _output.WriteLine($"  • Unique IDs: {UNIQUE_IDS}");
+    //         _output.WriteLine($"  • Duplicates per ID: {DUPLICATES_PER_ID}");
+    //         _output.WriteLine($"  • Total records: {TOTAL_RECORDS:N0}");
+    //         _output.WriteLine("");
+    //
+    //         // ===== STEP 2: INSERT ALL RECORDS =====
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //         _output.WriteLine("STEP 2: Inserting records in batch...");
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //
+    //         var sw = Stopwatch.StartNew();
+    //         await _context.TongHopKcbs.AddRangeV1Async(allRecords);
+    //         sw.Stop();
+    //
+    //         _output.WriteLine($"✓ Inserted {allRecords.Count:N0} records in {sw.ElapsedMilliseconds:N0}ms");
+    //         _output.WriteLine("");
+    //
+    //         await Task.Delay(3000); // Wait for commit
+    //
+    //         // ===== STEP 3: VERIFY TOTAL COUNT =====
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //         _output.WriteLine("STEP 3: Verifying total count...");
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //
+    //         var totalCount = await _context.TongHopKcbs
+    //             .Where(t => t.MA_LK == testId)
+    //             .CountAsync();
+    //
+    //         _output.WriteLine($"  • Total records in DB: {totalCount:N0}");
+    //         _output.WriteLine($"  • Expected: {TOTAL_RECORDS:N0}");
+    //         _output.WriteLine("");
+    //
+    //         // ===== STEP 4: COUNT DISTINCT IDS =====
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //         _output.WriteLine("STEP 4: Counting DISTINCT IDs...");
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //
+    //         var distinctSql = $@"
+    //             SELECT COUNT(DISTINCT id) as distinct_count
+    //             FROM tonghopkcb 
+    //             WHERE ma_lk = '{testId}'";
+    //
+    //         var distinctCount = await _context.QueryFirstAsync<int>(distinctSql);
+    //
+    //         _output.WriteLine($"  • Unique IDs: {distinctCount}");
+    //         _output.WriteLine($"  • Expected: {UNIQUE_IDS}");
+    //         _output.WriteLine($"  • Duplication ratio: {totalCount / (double)distinctCount:F1}x");
+    //         _output.WriteLine("");
+    //
+    //         // ===== STEP 5: FIND DUPLICATES =====
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //         _output.WriteLine("STEP 5: Finding duplicate statistics...");
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //
+    //         var duplicateStatsSql = $@"
+    //             SELECT 
+    //                 COUNT(*) as ids_with_duplicates,
+    //                 MIN(dup_count) as min_duplicates,
+    //                 MAX(dup_count) as max_duplicates,
+    //                 AVG(dup_count) as avg_duplicates
+    //             FROM (
+    //                 SELECT id, COUNT(*) as dup_count
+    //                 FROM tonghopkcb 
+    //                 WHERE ma_lk = '{testId}'
+    //                 GROUP BY id
+    //                 HAVING COUNT(*) > 1
+    //             )";
+    //
+    //         var stats = await _context.QueryFirstAsync<dynamic>(duplicateStatsSql);
+    //
+    //         _output.WriteLine($"  • IDs with duplicates: {stats.ids_with_duplicates}");
+    //         _output.WriteLine($"  • Min duplicates: {stats.min_duplicates}");
+    //         _output.WriteLine($"  • Max duplicates: {stats.max_duplicates}");
+    //         _output.WriteLine($"  • Avg duplicates: {stats.avg_duplicates:F1}");
+    //         _output.WriteLine("");
+    //
+    //         // ===== STEP 6: DEDUPLICATION SIMULATION =====
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //         _output.WriteLine("STEP 6: Simulating deduplication (keep latest by cost)...");
+    //         _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    //
+    //         var dedupSql = $@"
+    //             SELECT COUNT(*) as deduped_count
+    //             FROM (
+    //                 SELECT id, MAX(t_tongchi_bv) as latest_cost
+    //                 FROM tonghopkcb 
+    //                 WHERE ma_lk = '{testId}'
+    //                 GROUP BY id
+    //             )";
+    //
+    //         var dedupCount = await _context.QueryFirstAsync<int>(dedupSql);
+    //
+    //         _output.WriteLine($"  • After deduplication: {dedupCount} records");
+    //         _output.WriteLine($"  • Removed: {totalCount - dedupCount} duplicate records");
+    //         _output.WriteLine($"  • Reduction: {(1 - dedupCount / (double)totalCount) * 100:F1}%");
+    //         _output.WriteLine("");
+    //
+    //         // ===== ASSERTIONS =====
+    //         Assert.Equal(TOTAL_RECORDS, totalCount);
+    //         Assert.Equal(UNIQUE_IDS, distinctCount);
+    //         Assert.Equal(UNIQUE_IDS, dedupCount);
+    //
+    //         _output.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+    //         _output.WriteLine("║                    TEST SUMMARY                                ║");
+    //         _output.WriteLine("╚════════════════════════════════════════════════════════════════╝");
+    //         _output.WriteLine($"✅ Inserted {TOTAL_RECORDS:N0} records with {UNIQUE_IDS} unique IDs");
+    //         _output.WriteLine($"✅ Each ID has exactly {DUPLICATES_PER_ID} duplicates");
+    //         _output.WriteLine($"✅ Deduplication query works correctly");
+    //         _output.WriteLine($"⚠️  {totalCount - dedupCount} duplicate records need cleanup");
+    //         _output.WriteLine("");
+    //     }
+    //     finally
+    //     {
+    //         _output.WriteLine("🧹 Cleaning up test data...");
+    //         var deleted = await _context.TongHopKcbs
+    //             .Where(t => t.MA_LK == testId)
+    //             .DeleteAsync();
+    //         _output.WriteLine($"✓ Deleted {deleted} test record(s)");
+    //     }
+    // }
+
+    /// <summary>
+    /// Helper method to create test record
+    /// </summary>
+    private TongHopKcb CreateTestRecord(Guid id, string maLk, string patientName, decimal totalCost)
+    {
+        return new TongHopKcb
+        {
+            Id = id,
+            MA_LK = maLk,
+            STT = 1,
+            MA_BN = $"BN{Guid.NewGuid().ToString("N")[..8]}",
+            HO_TEN = patientName,
+            SO_CCCD = "001234567890",
+            NGAY_SINH = new DateTime(1990, 1, 1),
+            GIOI_TINH = 1,
+            NHOM_MAU = "O",
+            MA_QUOCTICH = "VN",
+            MA_DANTOC = "01",
+            MA_NGHE_NGHIEP = "01",
+            DIA_CHI = "Test Address",
+            MATINH_CU_TRU = "01",
+            MAHUYEN_CU_TRU = "001",
+            MAXA_CU_TRU = "00001",
+            DIEN_THOAI = "0901234567",
+            MA_THE_BHYT = "DN1234567890123",
+            MA_DKBD = "01001",
+            GT_THE_TU = "2024-01-01",
+            GT_THE_DEN = "2025-12-31",
+            LY_DO_VV = "Test",
+            CHAN_DOAN_VAO = "Test Diagnosis",
+            CHAN_DOAN_RV = "Test Diagnosis",
+            MA_BENH_CHINH = "A00.0",
+            MA_DOITUONG_KCB = "1",
+            NGAY_VAO = DateTime.Now.Date,
+            NGAY_RA = DateTime.Now.Date,
+            NGAY_TTOAN = DateTime.Now.Date,
+            T_THUOC = totalCost * 0.3m,
+            T_VTYT = totalCost * 0.2m,
+            T_TONGCHI_BV = totalCost,
+            T_TONGCHI_BH = totalCost * 0.8m,
+            T_BNTT = totalCost * 0.2m,
+            T_BHTT = totalCost * 0.8m,
+            NAM_QT = 2024,
+            THANG_QT = DateTime.Now.Month,
+            MA_LOAI_KCB = "1",
+            MA_KHOA = "K01",
+            MA_CSKCB = "01001",
+            ApiRequestId = Guid.NewGuid(),
+            TenantId = Guid.NewGuid()
+        };
+    }
+
     /// <summary>
     /// Query Iceberg metadata to count S3 Parquet files
     /// </summary>
