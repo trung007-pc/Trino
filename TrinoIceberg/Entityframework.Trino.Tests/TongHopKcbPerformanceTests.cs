@@ -167,8 +167,8 @@ public class TongHopKcbPerformanceTests : IDisposable
     public async Task Insert100K_TongHopKcb_MeasurePerformanceAndS3Files()
     {
         // ===== CONFIGURATION =====
-        const int TOTAL_RECORDS = 100_000;
-        const int BATCH_SIZE = 1000; // Insert 1000 records per batch
+        const int TOTAL_RECORDS = 100000;
+        const int BATCH_SIZE = 10000; // Insert 1000 records per batch
         var totalBatches = TOTAL_RECORDS / BATCH_SIZE;
 
         _output.WriteLine("╔════════════════════════════════════════════════════════════════╗");

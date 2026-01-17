@@ -21,7 +21,7 @@ public class IcebergDbContext : TrinoDbContext
     public IcebergDbContext(TrinoConnectionProperties properties) : base(properties)
     {
         // Khởi tạo DbSets với table names
-        Customers = Set<Customer>("customers");
+        Customers = Set<Customer>("customersc1");
         Orders = Set<Order>("orders");
         OrderItems = Set<OrderItem>("order_items");
         TongHopKcbs = Set<TongHopKcb>("tonghopkcb");
