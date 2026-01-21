@@ -234,6 +234,57 @@ public class JoinQueryTests : IDisposable
         _output.WriteLine($"  Order: {first.Order.Id}, Amount: {first.Order.Amount}, Status: {first.Order.Status}");
         _output.WriteLine($"  JOIN verified: Customer.Id == Order.CustomerId");
     }
+    
+     [Fact]
+    public async Task Join_WithNavigationProperties2()
+    {
+        // Arrange - JOIN trả về nested objects với wrapper class cho customer name
+        // NOTE: Dapper multi-mapping KHÔNG hỗ trợ primitive types như string, int, decimal
+        // Phải dùng class wrapper cho tất cả các types trong multi-mapping
+        var sql = new TrinoSqlBuilder(@"
+            SELECT        
+                c.name as Name,             
+                o.id,
+                o.customerid,
+                o.orderdate,
+                o.amount,
+                o.status
+            FROM customers c
+            INNER JOIN orders o ON c.id = o.customerid
+            LIMIT 10")
+            .Build();
+
+        // Act - Dùng QueryMultiMapAsync với wrapper class thay vì primitive string
+        // CustomerNameWrapper chứa property Name để Dapper map được
+        // splitOn: "id" - split tại o.id để bắt đầu map Order
+        var results = await _context.QueryMultiMapAsync<CustomerNameWrapper, Order, CustomerNameAndOrder>(
+            sql,
+            (customerWrapper, order) => new CustomerNameAndOrder
+            {
+                CustomerName = customerWrapper.Name,
+                Order = order
+            },
+            splitOn: "id"
+        );
+
+        // Assert
+        Assert.NotNull(results);
+        var list = results.ToList();
+        Assert.NotEmpty(list);
+        
+        // Verify data integrity
+        Assert.All(list, r =>
+        {
+            Assert.NotEmpty(r.CustomerName);
+            Assert.NotNull(r.Order);
+            Assert.NotEmpty(r.Order.Id);
+            Assert.True(r.Order.Amount > 0);
+        });
+        
+        _output.WriteLine($"Found {list.Count} customer-order records");
+        var first = list.First();
+        _output.WriteLine($"  Customer: {first.CustomerName}, Order: {first.Order.Id}, Amount: {first.Order.Amount}");
+    }
 
     [Fact]
     public async Task Join_OrderItems_Only()

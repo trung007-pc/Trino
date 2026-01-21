@@ -517,10 +517,12 @@ public class TongHopKcbPerformanceTests : IDisposable
                     return;
                 }
 
-                // Get sample Ids for testing
+                // Get sample Ids for testing - Random sampling from across the table
+                // (not just first rows, to test realistic full scan performance)
                 var sampleIdsSql = new TrinoSqlBuilder($@"
                     SELECT id 
                     FROM {tableName} 
+                    ORDER BY random()
                     LIMIT {QUERIES_PER_TABLE}
                 ").Build();
                 
