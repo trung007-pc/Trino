@@ -111,6 +111,14 @@ public class CustomerNameAndOrder
     public Order Order { get; set; }
 }
 
+/// <summary>
+/// Wrapper class for customer name - used in multi-mapping where primitive types are not supported
+/// </summary>
+public class CustomerNameWrapper
+{
+    public string Name { get; set; } = string.Empty;
+}
+
 public class CustomerWrapper
 {
     public Customer Customer { get; set; }

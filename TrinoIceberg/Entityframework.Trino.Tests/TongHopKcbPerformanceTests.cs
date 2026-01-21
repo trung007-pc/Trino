@@ -713,6 +713,247 @@ public class TongHopKcbPerformanceTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task Query_ById_15Tables_MeasureFullScanPerformance()
+    {
+        // ===== CONFIGURATION =====
+        var tableNames = new[]
+        {
+            "tonghopkcb", "tonghopkcb1", "tonghopkcb2", "tonghopkcb3", "tonghopkcb4",
+            "tonghopkcb5", "tonghopkcb6", "tonghopkcb7", "tonghopkcb8", "tonghopkcb9",
+            "tonghopkcb10", "tonghopkcb11", "tonghopkcb12", "tonghopkcb13", "tonghopkcb14",
+            "tonghopkcb15"
+        };
+        const int QUERIES_PER_TABLE = 10; // Test 10 random Id queries per table
+
+        _output.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+        _output.WriteLine("║    PERFORMANCE TEST: Query by Id (Full Scan) - 15 Tables      ║");
+        _output.WriteLine("╚════════════════════════════════════════════════════════════════╝");
+        _output.WriteLine($"Test Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        _output.WriteLine($"Tables to Test: {tableNames.Length}");
+        _output.WriteLine($"Queries per Table: {QUERIES_PER_TABLE}");
+        _output.WriteLine("");
+
+        var allResults = new List<TableQueryPerformance>();
+
+        // ===== STEP 1: QUERY EACH TABLE BY ID =====
+        _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        _output.WriteLine("STEP 1: Testing query performance by Id (PARALLEL - 15 tables)");
+        _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        _output.WriteLine("");
+
+        var allResultsBag = new ConcurrentBag<TableQueryPerformance>();
+        var totalTestSw = Stopwatch.StartNew();
+
+        // ĐA LUỒNG: Chạy song song tất cả 15 bảng với Task.Run
+        var tasks = tableNames.Select((tableName, tableIndex) => Task.Run(async () =>
+        {
+            var context = IcebergDbContext.Create("192.168.100.17", 8000, "iceberg", "v1");
+            
+            try
+            {
+                _output.WriteLine($"[Thread {Environment.CurrentManagedThreadId}] 🚀 Starting {tableName}...");
+
+                // Get total row count
+                var countSql = new TrinoSqlBuilder($"SELECT COUNT(*) as total FROM {tableName}").Build();
+                var totalRows = await context.QueryFirstOrDefaultAsync<long>(countSql);
+
+                if (totalRows == 0)
+                {
+                    _output.WriteLine($"[{tableName}] ⚠️  Table is empty, skipping...");
+                    return;
+                }
+
+                // Get sample Ids for testing - Random sampling from across the table
+                // (not just first rows, to test realistic full scan performance)
+                var sampleIdsSql = new TrinoSqlBuilder($@"
+                    SELECT id 
+                    FROM {tableName} 
+                    ORDER BY random()
+                    LIMIT {QUERIES_PER_TABLE}
+                ").Build();
+                
+                var sampleIds = await context.QueryAsync<Guid>(sampleIdsSql);
+                var idList = sampleIds.ToList();
+
+                if (!idList.Any())
+                {
+                    _output.WriteLine($"[{tableName}] ⚠️  Could not retrieve sample Ids, skipping...");
+                    return;
+                }
+
+                // Measure query performance for each Id
+                var queryTimes = new List<long>();
+                var foundCount = 0;
+
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    var testId = idList[i];
+                    
+                    var sw = Stopwatch.StartNew();
+                    var sql = new TrinoSqlBuilder($@"
+                        SELECT * 
+                        FROM {tableName} 
+                        WHERE id = UUID @id
+                    ")
+                    .WithParams(new { id = testId })
+                    .Build();
+                    
+                    var result = await context.QueryFirstOrDefaultAsync<TongHopKcb>(sql);
+                    sw.Stop();
+
+                    queryTimes.Add(sw.ElapsedMilliseconds);
+                    if (result != null) foundCount++;
+                }
+
+                // Calculate statistics
+                var avgTime = queryTimes.Average();
+                var minTime = queryTimes.Min();
+                var maxTime = queryTimes.Max();
+                var medianTime = queryTimes.OrderBy(x => x).ElementAt(queryTimes.Count / 2);
+
+                var tableResult = new TableQueryPerformance
+                {
+                    TableName = tableName,
+                    TotalRows = totalRows,
+                    QueriesExecuted = queryTimes.Count,
+                    RecordsFound = foundCount,
+                    AvgQueryTimeMs = avgTime,
+                    MinQueryTimeMs = minTime,
+                    MaxQueryTimeMs = maxTime,
+                    MedianQueryTimeMs = medianTime,
+                    QueryTimes = queryTimes
+                };
+
+                allResultsBag.Add(tableResult);
+
+                _output.WriteLine($"[{tableName}] ✅ Completed: Avg={avgTime:F2}ms, Min={minTime}ms, Max={maxTime}ms, Rows={totalRows:N0}");
+            }
+            catch (Exception ex)
+            {
+                _output.WriteLine($"[{tableName}] ❌ ERROR: {ex.Message}");
+            }
+            finally
+            {
+                context?.Dispose();
+            }
+        })).ToArray();
+
+        // Chờ tất cả tasks hoàn thành
+        await Task.WhenAll(tasks);
+        totalTestSw.Stop();
+
+        allResults = allResultsBag.OrderBy(r => r.TableName).ToList();
+
+        _output.WriteLine("");
+        _output.WriteLine($"⚡ PARALLEL EXECUTION COMPLETED in {totalTestSw.ElapsedMilliseconds:N0}ms ({totalTestSw.Elapsed.TotalSeconds:F2}s)");
+        _output.WriteLine($"   • Tables processed: {allResults.Count}/{tableNames.Length}");
+        _output.WriteLine($"   • Total queries: {allResults.Sum(r => r.QueriesExecuted):N0}");
+        _output.WriteLine("");
+
+        // ===== STEP 2: SUMMARY STATISTICS =====
+        _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        _output.WriteLine("STEP 2: Performance Summary Across All Tables");
+        _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        _output.WriteLine("");
+
+        if (allResults.Any())
+        {
+            _output.WriteLine("📊 DETAILED RESULTS BY TABLE:");
+            _output.WriteLine("");
+            _output.WriteLine($"{"Table",-18} | {"Rows",12} | {"Avg (ms)",10} | {"Min (ms)",10} | {"Max (ms)",10} | {"Median",10}");
+            _output.WriteLine(new string('─', 95));
+
+            foreach (var result in allResults.OrderBy(r => r.TableName))
+            {
+                _output.WriteLine($"{result.TableName,-18} | {result.TotalRows,12:N0} | {result.AvgQueryTimeMs,10:F2} | " +
+                                $"{result.MinQueryTimeMs,10} | {result.MaxQueryTimeMs,10} | {result.MedianQueryTimeMs,10}");
+            }
+
+            _output.WriteLine("");
+            _output.WriteLine("📊 OVERALL STATISTICS:");
+            _output.WriteLine($"  • Tables Tested:          {allResults.Count}/{tableNames.Length}");
+            _output.WriteLine($"  • Total Queries Executed: {allResults.Sum(r => r.QueriesExecuted):N0}");
+            _output.WriteLine($"  • Total Records Found:    {allResults.Sum(r => r.RecordsFound):N0}");
+            _output.WriteLine($"  • Average Query Time:     {allResults.Average(r => r.AvgQueryTimeMs):F2} ms (across all tables)");
+            _output.WriteLine($"  • Fastest Table Query:    {allResults.Min(r => r.MinQueryTimeMs)} ms ({allResults.OrderBy(r => r.MinQueryTimeMs).First().TableName})");
+            _output.WriteLine($"  • Slowest Table Query:    {allResults.Max(r => r.MaxQueryTimeMs)} ms ({allResults.OrderByDescending(r => r.MaxQueryTimeMs).First().TableName})");
+            _output.WriteLine("");
+
+            // ===== STEP 3: PERFORMANCE ANALYSIS =====
+            _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            _output.WriteLine("STEP 3: Performance Analysis");
+            _output.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            _output.WriteLine("");
+            _output.WriteLine("⚠️  KEY OBSERVATIONS:");
+            _output.WriteLine("");
+            _output.WriteLine("1. FULL TABLE SCAN:");
+            _output.WriteLine("   • Id is NOT a partition column");
+            _output.WriteLine("   • Each query scans ALL Parquet files");
+            _output.WriteLine("   • Performance degrades linearly with data size");
+            _output.WriteLine("");
+            _output.WriteLine("2. PERFORMANCE CORRELATION:");
+            _output.WriteLine("   • Larger tables = Slower queries");
+            
+            // Analyze correlation between table size and query time
+            var sizeTimeCorrelation = allResults
+                .OrderByDescending(r => r.TotalRows)
+                .Take(5)
+                .ToList();
+            
+            _output.WriteLine("   • Top 5 largest tables:");
+            foreach (var result in sizeTimeCorrelation)
+            {
+                var rowsPerMs = result.TotalRows / result.AvgQueryTimeMs;
+                _output.WriteLine($"     - {result.TableName}: {result.TotalRows:N0} rows → {result.AvgQueryTimeMs:F2}ms avg ({rowsPerMs:F0} rows scanned/ms)");
+            }
+            _output.WriteLine("");
+            
+            _output.WriteLine("3. OPTIMIZATION RECOMMENDATIONS:");
+            _output.WriteLine("   ✓ Use partition columns (e.g., THANG_QT, NAM_QT) for filtering");
+            _output.WriteLine("   ✓ Create indexed views for frequently queried Id patterns");
+            _output.WriteLine("   ✓ Consider adding Id to partition strategy if Id queries are critical");
+            _output.WriteLine("   ✓ Use bloom filters or min/max statistics for Id columns");
+            _output.WriteLine("");
+
+            // ===== FINAL SUMMARY =====
+            _output.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+            _output.WriteLine("║                      TEST SUMMARY                              ║");
+            _output.WriteLine("╚════════════════════════════════════════════════════════════════╝");
+            _output.WriteLine($"✅ Status:                  SUCCESS");
+            _output.WriteLine($"📊 Tables Tested:           {allResults.Count}/{tableNames.Length}");
+            _output.WriteLine($"🔍 Total Queries:           {allResults.Sum(r => r.QueriesExecuted):N0}");
+            _output.WriteLine($"⏱️  Avg Query Time:          {allResults.Average(r => r.AvgQueryTimeMs):F2} ms");
+            _output.WriteLine($"⚠️  Performance:             SLOW (Full Table Scan on non-partition column)");
+            _output.WriteLine("");
+
+            // Assertions
+            Assert.True(allResults.Count > 0, "No tables were successfully tested");
+            Assert.True(allResults.All(r => r.AvgQueryTimeMs > 0), "Invalid query times detected");
+        }
+        else
+        {
+            _output.WriteLine("❌ No results collected. All tables may be empty or inaccessible.");
+            Assert.Fail("No tables were successfully tested");
+        }
+    }
+
+    /// <summary>
+    /// Performance result for a single table
+    /// </summary>
+    private class TableQueryPerformance
+    {
+        public string TableName { get; set; }
+        public long TotalRows { get; set; }
+        public int QueriesExecuted { get; set; }
+        public int RecordsFound { get; set; }
+        public double AvgQueryTimeMs { get; set; }
+        public long MinQueryTimeMs { get; set; }
+        public long MaxQueryTimeMs { get; set; }
+        public long MedianQueryTimeMs { get; set; }
+        public List<long> QueryTimes { get; set; }
+    }
+
     public void Dispose()
     {
         _context?.Dispose();

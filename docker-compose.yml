@@ -25,6 +25,29 @@ services:
       retries: 5
 
   # ============================================
+  # POSTGRESQL DATABASE - ĐỐI SOÁT
+  # Database riêng để lưu dữ liệu đối soát tạm thời
+  # ============================================
+  postgres-doisoat:
+    image: postgres:15-alpine
+    container_name: postgres-doisoat
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=doi_soat_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-doisoat-data:/var/lib/postgresql/data
+    networks:
+      - trino-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d doi_soat_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
   # TRINO QUERY ENGINE
   # Query engine để chạy SQL với Iceberg JDBC Catalog
   # ============================================
@@ -38,11 +61,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-doisoat:
+        condition: service_healthy
     networks:
       - trino-net
 
 volumes:
   postgres-data:
+  postgres-doisoat-data:
 
 networks:
   trino-net:
